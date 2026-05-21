@@ -3,25 +3,70 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --neon: #00ff41;
+  --neon-dim: #00cc33;
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --border: #1a1a1a;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
+html,
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg);
+  color: #e0e0e0;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--neon-dim);
+  border-radius: 3px;
+}
+
+/* Neon text glow effect */
+.neon-text {
+  color: var(--neon);
+  text-shadow: 0 0 8px #00ff4188, 0 0 16px #00ff4144;
+}
+
+/* Neon border glow */
+.neon-border {
+  border-color: var(--neon);
+  box-shadow: 0 0 8px #00ff4144;
+}
+
+/* Code panel */
+.code-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+/* Scanline overlay for aesthetic */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.05) 2px,
+    rgba(0, 0, 0, 0.05) 4px
+  );
+  pointer-events: none;
 }
