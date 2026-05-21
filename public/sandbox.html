@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<script>
+  window.addEventListener('message', function(event) {
+    if (!event.data || event.data.type !== 'decode') return;
+
+    var code = event.data.code;
+    var captured = null;
+
+    // Override Function.prototype.constructor so JSFuck's
+    // []["filter"]["constructor"] path returns our interceptor
+    var OriginalFunction = Function;
+
+    var interceptor = function() {
+      var args = Array.prototype.slice.call(arguments);
+      var body = args[args.length - 1];
+      if (typeof body === 'string') {
+        captured = body;
+        return function() {};
+      }
+      return OriginalFunction.apply(this, args);
+    };
+    interceptor.prototype = OriginalFunction.prototype;
+
+    try {
+      Object.defineProperty(Function.prototype, 'constructor', {
+        get: function() { return interceptor; },
+        configurable: true,
+      });
+    } catch(e) {}
+
+    // Override global Function
+    window.Function = interceptor;
+
+    // Override eval
+    var origEval = window.eval;
+    window.eval = function(str) {
+      if (typeof str === 'string') {
+        captured = str;
+        return undefined;
+      }
+      return origEval(str);
+    };
+
+    try {
+      // Use origEval to actually run the code (our override would recurse)
+      origEval(code);
+    } catch(e) {
+      // Some decoders throw intentionally; captured may still be set
+    }
+
+    // Restore
+    try {
+      Object.defineProperty(Function.prototype, 'constructor', {
+        get: function() { return OriginalFunction; },
+        configurable: true,
+      });
+    } catch(e) {}
+
+    if (captured !== null) {
+      event.source.postMessage({ type: 'result', output: captured }, '*');
+    } else {
+      event.source.postMessage({ type: 'error', message: 'No output captured from sandbox' }, '*');
+    }
+  });
+</script>
+</body>
+</html>
