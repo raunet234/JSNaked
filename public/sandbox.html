@@ -3,68 +3,160 @@
 <head><meta charset="utf-8"></head>
 <body>
 <script>
+(function() {
+  'use strict';
+
   window.addEventListener('message', function(event) {
     if (!event.data || event.data.type !== 'decode') return;
 
     var code = event.data.code;
+    var id = event.data.id || null;
     var captured = null;
 
-    // Override Function.prototype.constructor so JSFuck's
-    // []["filter"]["constructor"] path returns our interceptor
-    var OriginalFunction = Function;
+    // Save originals
+    var OrigFunction = Function;
+    var origEval = eval;
+    var origSetTimeout = setTimeout;
+    var origSetInterval = setInterval;
 
-    var interceptor = function() {
+    // ===================================================================
+    // STRATEGY: Multi-stage aware interception
+    //
+    // JSFuck and similar encodings often use MULTIPLE Function() calls
+    // as a decode chain:
+    //   Stage 0: Function("return eval")  → gets eval reference
+    //   Stage 1: Function(encodedBody)()  → returns decoded string
+    //   Stage 2: eval(decodedString)      → final code
+    //
+    // If we block Function() at stage 1, the chain breaks.
+    // Instead, we let Function() work normally but intercept eval()
+    // and the final execution attempt.
+    // ===================================================================
+
+    // Track all string outputs from Function calls
+    var functionOutputs = [];
+
+    // Wrap Function constructor: let it create real functions,
+    // but wrap each returned function to track what it returns
+    function wrapFunction() {
       var args = Array.prototype.slice.call(arguments);
       var body = args[args.length - 1];
-      if (typeof body === 'string') {
-        captured = body;
+
+      // Create the REAL function so decode chains work
+      var realFn;
+      try {
+        realFn = OrigFunction.apply(this, args);
+      } catch(e) {
+        // If Function creation fails, return a no-op
         return function() {};
       }
-      return OriginalFunction.apply(this, args);
-    };
-    interceptor.prototype = OriginalFunction.prototype;
 
+      // Wrap the function to track its return value
+      var wrappedFn = function() {
+        var result;
+        try {
+          result = realFn.apply(this, arguments);
+        } catch(e) {
+          return undefined;
+        }
+
+        // Track string outputs (these are decode results)
+        if (typeof result === 'string' && result.length > 0) {
+          functionOutputs.push(result);
+        }
+
+        return result;
+      };
+
+      wrappedFn.prototype = realFn.prototype;
+      return wrappedFn;
+    }
+    wrapFunction.prototype = OrigFunction.prototype;
+    wrapFunction.toString = function() { return 'function Function() { [native code] }'; };
+
+    // Override Function everywhere
+    try { Function.prototype.constructor = wrapFunction; } catch(e) {
+      try {
+        Object.defineProperty(Function.prototype, 'constructor', {
+          value: wrapFunction, writable: true, configurable: true
+        });
+      } catch(e2) {}
+    }
+    try { window.Function = wrapFunction; } catch(e) {}
+
+    // Override eval — this captures the FINAL decoded code
     try {
-      Object.defineProperty(Function.prototype, 'constructor', {
-        get: function() { return interceptor; },
-        configurable: true,
-      });
-    } catch(e) {}
-
-    // Override global Function
-    window.Function = interceptor;
-
-    // Override eval
-    var origEval = window.eval;
-    window.eval = function(str) {
-      if (typeof str === 'string') {
-        captured = str;
+      window.eval = function(str) {
+        if (typeof str === 'string' && str.length > 0) {
+          captured = str;
+        }
         return undefined;
-      }
-      return origEval(str);
-    };
-
-    try {
-      // Use origEval to actually run the code (our override would recurse)
-      origEval(code);
-    } catch(e) {
-      // Some decoders throw intentionally; captured may still be set
-    }
-
-    // Restore
-    try {
-      Object.defineProperty(Function.prototype, 'constructor', {
-        get: function() { return OriginalFunction; },
-        configurable: true,
-      });
+      };
     } catch(e) {}
 
-    if (captured !== null) {
-      event.source.postMessage({ type: 'result', output: captured }, '*');
-    } else {
-      event.source.postMessage({ type: 'error', message: 'No output captured from sandbox' }, '*');
+    // Override setTimeout/setInterval with string args
+    try {
+      window.setTimeout = function(fn) {
+        if (typeof fn === 'string') { captured = fn; return 0; }
+        return origSetTimeout.apply(window, arguments);
+      };
+      window.setInterval = function(fn) {
+        if (typeof fn === 'string') { captured = fn; return 0; }
+        return origSetInterval.apply(window, arguments);
+      };
+    } catch(e) {}
+
+    // ===== RUN THE CODE =====
+    var evalResult;
+    try {
+      var indirectEval = origEval;
+      evalResult = indirectEval(code);
+    } catch(e) {
+      // Code may throw after interception — captured may still be set
     }
+
+    // ===== FALLBACK STRATEGIES =====
+
+    // Fallback 1: eval result is a string
+    if (captured === null && typeof evalResult === 'string' && evalResult.length > 0) {
+      captured = evalResult;
+    }
+
+    // Fallback 2: Use the longest string returned by a Function call
+    // (this handles cases where the code doesn't use eval at the end)
+    if (captured === null && functionOutputs.length > 0) {
+      var longest = functionOutputs.reduce(function(a, b) {
+        return a.length >= b.length ? a : b;
+      });
+      if (longest.length > 0) {
+        captured = longest;
+      }
+    }
+
+    // ===== RESTORE ORIGINALS =====
+    try { Function.prototype.constructor = OrigFunction; } catch(e) {}
+    try { window.Function = OrigFunction; } catch(e) {}
+    try { window.eval = origEval; } catch(e) {}
+    try { window.setTimeout = origSetTimeout; } catch(e) {}
+    try { window.setInterval = origSetInterval; } catch(e) {}
+
+    // ===== SEND RESULT =====
+    var response;
+    if (captured !== null && captured.length > 0) {
+      response = { type: 'result', output: captured };
+    } else {
+      response = {
+        type: 'error',
+        message: 'No output captured from sandbox. The code may use an unrecognized obfuscation pattern.'
+      };
+    }
+    if (id !== null) response.id = id;
+
+    try {
+      event.source.postMessage(response, '*');
+    } catch(e) {}
   });
+})();
 </script>
 </body>
 </html>

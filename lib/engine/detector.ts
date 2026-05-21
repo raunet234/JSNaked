@@ -14,7 +14,11 @@ export function isEvalWrapped(code: string): boolean {
 }
 
 export function isObfuscatorIO(code: string): boolean {
-  return /_0x[a-f0-9]+/i.test(code) && /\(['"]0x[0-9a-f]+['"]\)/.test(code);
+  // Match _0x style variable names AND either quoted or numeric hex accessor calls
+  return (
+    /_0x[a-f0-9]+/i.test(code) &&
+    (/\(['"]0x[0-9a-f]+['"]\)/.test(code) || /\(0x[0-9a-f]+\)/i.test(code))
+  );
 }
 
 export function isBase64Encoded(code: string): boolean {

@@ -34,3 +34,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# User excluded files
+*.md
+*.txt
+scratch/
+decoded.js
+fully_resolved.js

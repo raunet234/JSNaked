@@ -70,6 +70,12 @@ export async function deobfuscate(
       break;
     }
 
+    // Stale-output guard: if decoding didn't change anything, stop looping
+    if (current === input_snapshot) {
+      onLog('⚠️ Decoder produced identical output — stopping to avoid infinite loop.');
+      break;
+    }
+
     layers.push({
       type,
       input: input_snapshot,
