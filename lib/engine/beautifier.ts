@@ -9,7 +9,6 @@ export function beautify(code: string): string {
       preserve_newlines: true,
       keep_array_indentation: false,
       break_chained_methods: false,
-      indent_scripts: 'normal',
       brace_style: 'collapse',
       space_before_conditional: true,
       unescape_strings: true,
