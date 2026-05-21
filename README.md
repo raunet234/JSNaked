@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# { JSNaked }
 
-## Getting Started
+> Strip away JavaScript obfuscation, layer by layer.
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-38bdf8?logo=tailwindcss)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+JSNaked is a client-side JavaScript deobfuscator that automatically detects and strips multiple layers of obfuscation — all in the browser, no server required.
+
+## Supported Obfuscation Types
+
+- ✅ JSFuck (`[]()!+` character sets)
+- ✅ eval / new Function wrappers
+- ✅ obfuscator.io `_0x` string arrays
+- ✅ Base64 (`atob()` calls)
+- ✅ Hex escape sequences (`\xNN`)
+- ✅ Unicode escape sequences (`\uNNNN`)
+- ✅ Dean Edwards Packer
+
+## Screenshots
+
+_Coming soon_
+
+## How It Works
+
+1. Paste or upload obfuscated JavaScript
+2. JSNaked detects the obfuscation type
+3. Applies the correct decoder
+4. Checks if the output is still obfuscated → loops if yes
+5. Beautifies and displays the clean result
+
+All decoding happens in your browser. Your code is **never sent to any server**.
+
+For JSFuck, eval, and packer decoding, JSNaked uses a sandboxed iframe with `sandbox="allow-scripts"` and intercepts `Function`/`eval` via postMessage — so malicious code cannot escape the sandbox.
+
+## Running Locally
 
 ```bash
+git clone https://github.com/raunet234/JSNaked.git
+cd JSNaked
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Running Tests
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run test:run
+```
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- [Next.js 14](https://nextjs.org/) (App Router)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [js-beautify](https://github.com/beautify-web/js-beautify)
+- [react-syntax-highlighter](https://github.com/react-syntax-highlighter/react-syntax-highlighter)
+- [Vitest](https://vitest.dev/) + [@testing-library/react](https://testing-library.com/)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Fork the repo
+2. Create a feature branch: `git checkout -b feat/my-feature`
+3. Commit changes: `git commit -m "feat: add my feature"`
+4. Push and open a PR
 
-## Deploy on Vercel
+## Author
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Rauneet Raj** — [github.com/raunet234](https://github.com/raunet234)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## License
+
+MIT
